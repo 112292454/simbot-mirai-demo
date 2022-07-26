@@ -1,11 +1,14 @@
 package love.simbot.example;
 
+import love.forte.common.ioc.annotation.Beans;
+import love.forte.simboot.spring.autoconfigure.EnableSimbot;
 import love.forte.simbot.annotation.SimbotApplication;
 import love.forte.simbot.annotation.SimbotResource;
 import love.forte.simbot.core.SimbotApp;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
+
 
 /**
  * simbot 启动类。
@@ -22,11 +25,13 @@ import org.springframework.context.annotation.ComponentScan;
  *
  * @author ForteScarlet
  */
-@SimbotApplication({
+/*@SimbotApplication({
         @SimbotResource(value = "simbot.yml", orIgnore = true),
         @SimbotResource(value = "simbot-dev.yml", orIgnore = true, command = "dev"),
-})
+})*/
 //@SimbotApplication
+@SpringBootApplication
+@EnableSimbot
 public class SimbotExampleApplication {
     @Bean
     public MyProduce myproduce(){
@@ -34,11 +39,8 @@ public class SimbotExampleApplication {
     }
 
     public static void main(String[] args) {
-        /*
-            run方法的第一个参数是一个标注了@SimbotApplication注解的启动类。
-            第二个参数是main方法得到的启动参数。
-         */
-        SimbotApp.run(SimbotExampleApplication.class, args);
+        SpringApplication.run(SimbotExampleApplication.class,args);
+        //SimbotApp.run(SimbotExampleApplication.class, args);
 
     }
 }

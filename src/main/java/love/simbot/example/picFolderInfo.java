@@ -14,9 +14,18 @@ import java.util.stream.Stream;
 public class picFolderInfo {
 	private final HashMap<Integer,String> PicPath;
 	private final String folder;
-	private  int nums=0;
-	public picFolderInfo(String folderPath) {
+	private int nums=0;
+	private String kind;
+	public picFolderInfo(String kind,String folderPath) {
 		folder=folderPath;
+		this.kind=kind;
+		try {
+			new BatchController().batch(folderPath,kind);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
 		File info = new File(folderPath + "\\info.txt");
 		PicPath = new HashMap<>();
 		try {
@@ -71,7 +80,7 @@ public class picFolderInfo {
 		}
 	}
 	public  String get(int i){
-		return PicPath.get(i);
+		return PicPath.getOrDefault(i,null);
 	}
 	public  String getName(int i){
 		String[] path= PicPath.get(i).split("\\\\|\\.");
@@ -87,6 +96,6 @@ public class picFolderInfo {
 			e.printStackTrace();
 			return this;
 		}
-		return new picFolderInfo(folder);
+		return new picFolderInfo(folder, folder);
 	}
 }

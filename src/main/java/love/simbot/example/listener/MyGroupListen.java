@@ -5,6 +5,7 @@ import DownloadTools.DownLoad;
 import DownloadTools.QRCode;
 import catcode.CatCodeUtil;
 import catcode.Neko;
+import com.google.gson.Gson;
 import love.forte.common.ioc.annotation.Beans;
 import love.forte.common.ioc.annotation.Depend;
 import love.forte.simbot.annotation.Filter;
@@ -13,6 +14,7 @@ import love.forte.simbot.annotation.OnGroupMsgRecall;
 import love.forte.simbot.api.message.MessageContent;
 import love.forte.simbot.api.message.MessageContentBuilderFactory;
 import love.forte.simbot.api.message.containers.AccountInfo;
+import love.forte.simbot.api.message.containers.GroupAccountInfo;
 import love.forte.simbot.api.message.containers.GroupInfo;
 import love.forte.simbot.api.message.events.GroupMsg;
 import love.forte.simbot.api.message.events.GroupMsgRecall;
@@ -23,13 +25,11 @@ import love.simbot.example.MyProduce;
 import love.simbot.example.picFolderInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Random;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,28 +40,31 @@ import java.util.regex.Pattern;
  */
 @Beans
 public class MyGroupListen {
+    public static final int e97=1000000007;
     static Pattern p1= Pattern.compile("text\":.\"[^\"]+");//text":4"xxxxxx
     static Pattern number =Pattern.compile("\\b\\d+");//1324364 etc.
     static Pattern p3=Pattern.compile("name:\\w+");//name:xxxxxx
     static Pattern Dice=Pattern.compile("\\d+(d|D)\\d+");//aDb;adb
     static Pattern validID= Pattern.compile("([一-龟|\\w| ]+([- ])+)?[\\d|.| ]{2,}-*([一-龟|\\w| ]+([- ])+)*[一-龟|\\w| ]+");//buptIDCheck
     static HashSet<String> checkedID=new HashSet<>();
-    static QRCode q=new QRCode().setToken();
     static 	CatCodeUtil util = CatCodeUtil.INSTANCE;
 
     private static final String BUPTHELP="看群公告群文件群相册群精华消息\n\n"
             +"学校官网(需有学号后使用)： webvpn.bupt.edu.cn  常用信息门户、本科教务管理系统\n"
             +"进群记得修改群名片 例如【20-河南-计算机-汪哈羊】"
             +util.toCat("image", true, "file=" +"D:\\botPic\\bupt\\tips.jpg")
-            +"功能：学校地图，学校网址，宿舍规格";
+            +"功能：学校地图，学校网址，宿舍规格,本部地图，快递地址";
 
     /** log */
     private static final Logger LOG = LoggerFactory.getLogger(MyGroupListen.class);
     @Depend
     private MessageContentBuilderFactory builderFactory;
 
-    @Autowired
+
+    @Depend
     MyProduce myProduce;
+    @Depend
+    QRCode q;
 
     /**
      *
@@ -77,7 +80,7 @@ public class MyGroupListen {
     @Filter(value = "/qr",matchType = MatchType.STARTS_WITH)
     public void QRCode(GroupMsg groupMsg,Sender sender) {
         String msg=groupMsg.getMsg();
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"basic");
+        boolean auth=myProduce.getAuth(groupMsg, "basic");
         System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+msg+"要求二维码识别");
         MessageContent msgContent = groupMsg.getMsgContent();
         //获取所有图片链接并得到其中的二维码识别结果
@@ -137,7 +140,7 @@ public class MyGroupListen {
     @Filter(value = "/ir",matchType = MatchType.STARTS_WITH)
     public void getRandomNetPic(GroupMsg groupMsg, Sender sender){
         // 获取消息正文。
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"pic");
+        boolean auth=myProduce.getAuth(groupMsg, "pic");
         String text=groupMsg.getText();
         CatCodeUtil util = CatCodeUtil.INSTANCE;
         int num = 1;
@@ -187,13 +190,15 @@ public class MyGroupListen {
     public void getRandomLocalPic(GroupMsg groupMsg, Sender sender) {
         // 获取消息正文。
         String text = groupMsg.getText().trim();
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"pic");
+        boolean auth=myProduce.getAuth(groupMsg, "pic");
         int num = 1;
         Matcher m= number.matcher(text);
         if(m.find()) {
             num = Integer.parseInt(m.group().trim());
         }
-        num=Math.min(num,5);
+        if(!groupMsg.getAccountInfo().getAccountCode().equals("1154459434")){
+            num=Math.min(num,5);
+        }
 
         LocalPicMethod1(groupMsg, sender, text, auth, num);
     }
@@ -209,14 +214,23 @@ public class MyGroupListen {
             return;
         }
         text=text.replace("来点"," ").replace("涩图"," ").replace("色图"," ");
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"pic");
+        boolean auth=myProduce.getAuth(groupMsg, "pic");
         int num = 3;
 
         LocalPicMethod1(groupMsg, sender, text, auth, num);
     }
 
     private void LocalPicMethod1(GroupMsg groupMsg, Sender sender, String text, boolean auth, int num) {
-        String flag = "localPic";
+        String flag = "localPic",code=groupMsg.getGroupInfo().getGroupCode();
+
+        int times=myProduce.localPicSended.getOrDefault(code,0);
+        if(times>30){
+            if(times!=e97){
+                myProduce.sendMsg(groupMsg, sender,MyProduce.ToMoreMsg,auth);
+                myProduce.localPicSended.put(code,e97);
+            }
+        }
+
         if (text.contains("ff")) {
             flag = "ff14";
         }else if(text.contains("福利姬")){
@@ -227,10 +241,13 @@ public class MyGroupListen {
         }
         if (text.contains("h")) {
             flag += "h";
-            auth= myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"r18");
+            auth= myProduce.getAuth(groupMsg, "r18");
+        }
+        if(!auth){
+            num=0;
         }
         picFolderInfo folderInfo=myProduce.getFolderPath(flag);
-        System.out.println(groupMsg.getAccountInfo().getAccountCode() + "发送了" + groupMsg.getMsg() + "要求" + num + "张"+flag+"图片");
+        System.out.println(code + "发送了" + groupMsg.getMsg() + "要求" + num + "张"+flag+"图片");
         StringBuilder sb = new StringBuilder();
         CatCodeUtil util = CatCodeUtil.INSTANCE;
         int size = myProduce.localSize, id;
@@ -247,11 +264,11 @@ public class MyGroupListen {
             myProduce.setSendPicPath(name,folderInfo.get(id));
             myProduce.sendMsg(groupMsg, sender, sb.toString(),auth);
             sb=new StringBuilder();
-            if(!auth){
-                return;
-            }
         }
         myProduce.sendMsg(groupMsg, sender, sb.toString(),auth);
+        times=Math.max(times,myProduce.localPicSended.getOrDefault(code,0))+num;
+        myProduce.localPicSended.put(code, times);
+        System.out.println(code + "已发送" + times + "本地图片\n\n");
     }
     /**
      *
@@ -266,11 +283,24 @@ public class MyGroupListen {
     @OnGroup
     @Filter(value = "贴贴",matchType = MatchType.ENDS_WITH)
     public void tietie(GroupMsg groupMsg, Sender sender){
+        String res="";
         if(groupMsg.getMsgContent().toString().contains("3425460643")){
             picFolderInfo folderInfo=myProduce.getFolderPath("贴贴");
-            int index=new Random().nextInt(folderInfo.size());
-            myProduce.sendMsg(groupMsg, sender, util.toCat("image", true, "file=" +folderInfo.get(index)), true);
+            int index=new Random().nextInt(folderInfo.size()+2);
+            res=util.toCat("image", true, "file=" +folderInfo.get(index));
+            if (index > folderInfo.size()) {
+                res="　　       　∧,,　\n" +
+                        "　　　　ヾ ｀. ､`フ\n" +
+                        "　　　(,｀'´ヽ､､ﾂﾞ\n" +
+                        "　 (ヽｖ'　　　`''ﾞつ\n" +
+                        "　　,ゝ　 ⌒`ｙ'''´\n" +
+                        "　 （ (´＾ヽこつ\n" +
+                        "　　 ) )\n" +
+                        "　　(ノ";
+            }
         }
+        myProduce.sendMsg(groupMsg, sender,res , true);
+
     }
     /**
      *
@@ -288,7 +318,7 @@ public class MyGroupListen {
         CatCodeUtil util = CatCodeUtil.INSTANCE;
 
         String text=groupMsg.getText().toLowerCase(Locale.ROOT);
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"basic");
+        boolean auth=myProduce.getAuth(groupMsg, "basic");
         Matcher dice=Dice.matcher(text),num=number.matcher(text);
         int range=100,res=0,max=50;
         Random random=new Random();
@@ -297,7 +327,7 @@ public class MyGroupListen {
             if(num.find()){
                 max=Integer.parseInt(num.group());
             }
-            if(max>100||max<0){
+            if(max>=100||max<=0){
                 myProduce.sendMsg(groupMsg,sender,"错误的成功率",auth);
                 return;
             }
@@ -314,7 +344,24 @@ public class MyGroupListen {
             }
             builder.append(groupMsg.getAccountInfo().getAccountRemark());
             builder.append("进行").append(name).append("检定：D100=");
-            builder.append(res).append("/").append(max).append((res<=5||res>=95)?"  大":"  ").append(res>max?"失败":"成功");
+            builder.append(res).append("/").append(max).append("   ");
+
+            if(res<=max){
+                if(res<=5){
+                    builder.append("大");
+                }else if(res<=max/5){
+                    builder.append("极难");
+                }else if(res<=max/2){
+                    builder.append("困难");
+                }
+                builder.append("成功");
+            }else {
+                if(res>95){
+                    builder.append("大");
+                }
+                builder.append("失败");
+            }
+
             myProduce.sendMsg(groupMsg,sender,builder.toString(),auth);
         }else if(dice.find()){
             String[] n=dice.group().split("d");
@@ -349,7 +396,7 @@ public class MyGroupListen {
     @Filter(value = "/sau",matchType = MatchType.STARTS_WITH)
     public void imageSauce(GroupMsg groupMsg, Sender sender){
         String text=groupMsg.getText().toLowerCase(Locale.ROOT),msg=groupMsg.getMsg();
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"basic");
+        boolean auth=myProduce.getAuth(groupMsg, "basic");
         List<Neko> imageCats = groupMsg.getMsgContent().getCats("image");
         System.out.println("img counts: " + imageCats.size());
         for (Neko image : imageCats) {
@@ -363,6 +410,46 @@ public class MyGroupListen {
         }
 
         System.out.println(groupMsg.getAccountInfo().getAccountCode()+"要求图片识别——低配版");
+    }
+
+    @OnGroup
+    @Filter(value = "/news",matchType = MatchType.EQUALS)
+    public void news(GroupMsg groupMsg,Sender sender){
+        String pic=util.toCat("image","url=https://api.vvhan.com/api/60s");
+        myProduce.sendMsg(groupMsg,sender,pic,true);
+    }
+
+    @OnGroup
+    @Filter(value = "/makeqr",matchType = MatchType.STARTS_WITH)
+    public void makeQR(GroupMsg groupMsg,Sender sender){
+        String txt=groupMsg.getText();
+        txt=txt.substring(txt.indexOf(' '));
+        String pic=util.toCat("image","url=https://api.vvhan.com/api/qr?text="+txt);
+        myProduce.sendMsg(groupMsg,sender,pic,true);
+    }
+
+    //@OnGroup
+    @Filter(value = "hitokoto|一言",matchType = MatchType.REGEX_MATCHES)
+    public void hitokoto(GroupMsg groupMsg,Sender sender){
+        String url="https://api.vvhan.com/api/ian?type=json";
+        if(new Random().nextInt(100)>80){
+            url+="&cl=ac";
+        }else{
+            url+="&cl=wx";
+        }
+        URL u= null;
+        try {
+            u = new URL(url);
+            Gson gson = new Gson();
+            Map<String,String> map;
+            map=gson.fromJson(new Scanner(u.openStream()).nextLine(),Map.class);
+            Map<String,String> source=gson.fromJson(gson.toJson(map.get("data")),Map.class);
+            String txt=source.get("vhan"),from=source.get("source");
+            String res=txt+"\n         ——by"+from;
+            myProduce.sendMsg(groupMsg,sender,res,true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -380,17 +467,18 @@ public class MyGroupListen {
     @OnGroup
     @Filter(value = "/help",matchType = MatchType.CONTAINS)
     public void helpMsg(GroupMsg groupMsg, Sender sender){
-        boolean auth=myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"basic");
+        boolean auth=myProduce.getAuth(groupMsg, "basic");
         System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得帮助");
         StringBuilder builder=new StringBuilder();
         builder.append("当前功能（[xx]为可选项）:\n");
-        builder.append(" 1、“/ir [数量]“得到随机二刺猿图\n");
+        //builder.append(" 1、“/ir [数量]“得到随机二刺猿图\n");
         builder.append(" 2、”/qr 图片“（可一次多张）识别其中可能存在的二维码链接\n");
         builder.append(" 3、“/lr [类型] [数量]“得到本地图片\n");
-        if(myProduce.getAuth(groupMsg.getGroupInfo().getGroupCode(),"pic")){
+        if(myProduce.getAuth(groupMsg, "pic")){
             builder.append("    类型有：ff14、ff14h、（空白）、h、福利姬(图最多）\n");
         }
         builder.append(" 4、”/r [x]“,默认x=100;“/ra [x(成功率)] [名称]”\n");
+        builder.append("其他：“一言”/“hitokoto”语录、“/makeqr [链接]”生成对应二维码、“/news”今日新闻");
         //builder.append(" 5、“/sau 图片” 为识图（究级低配版）\n");
         //builder.append(" 消息最后包含“private”则只发送私聊");
         myProduce.sendMsg(groupMsg,sender,builder.toString(),auth);
@@ -432,6 +520,10 @@ public class MyGroupListen {
                         "图书馆预约： http://order.bupt.edu.cn/\n" +
                         "爱课堂： https://iclass.bupt.edu.cn/  \n" +
                         "22招生宣传： https://mp.weixin.qq.com/s/2hcgfdnDalK9MpHZzLnPCA";
+            }else if(txt.equals("快递地址")){
+                res="北京邮电大学收货地址：北京市昌平区沙河镇高教园北京邮电大学沙河校区菜鸟驿站收";
+            }else if(txt.contains("生活费")&&txt.contains("多少")){
+                res="1500生活足够，有社交聚会/购物（衣物等）/谈恋爱等需求自行斟酌；第一个月建议至少3k+，如果家长没有准备被褥等大件额外再加";
             }
         }
         if("852209848".equals(groupCode)){
@@ -443,31 +535,6 @@ public class MyGroupListen {
     }
 
     @OnGroup
-    @Filter(value = "宿舍规格",matchType = MatchType.CONTAINS)
-    public void sushe(GroupMsg groupMsg, Sender sender){
-        System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得bupt帮助");
-        myProduce.sendMsg(groupMsg,sender,util.toCat("image", true, "file=" +"D:\\botPic\\bupt\\宿舍.jpg"),true);
-    }
-    @OnGroup
-    @Filter(value = "学校地图",matchType = MatchType.EQUALS)
-    public void map(GroupMsg groupMsg, Sender sender){
-        System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得bupt帮助");
-        myProduce.sendMsg(groupMsg,sender,util.toCat("image", true, "file=" +"D:\\botPic\\bupt\\校园地形.jpg"),true);
-    }
-    @OnGroup
-    @Filter(value = "本部地图",matchType = MatchType.EQUALS)
-    public void originMap(GroupMsg groupMsg, Sender sender){
-        System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得bupt帮助");
-        myProduce.sendMsg(groupMsg,sender,util.toCat("image", true, "file=" +"D:\\botPic\\bupt\\本部地图.jpg"),true);
-    }
-    @OnGroup
-    @Filter(value = "学校网址",matchType = MatchType.EQUALS)
-    public void wangzhi(GroupMsg groupMsg, Sender sender){
-        System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得bupt帮助");
-        myProduce.sendMsg(groupMsg,sender,"选课使用教务系统，如果无法直接打开可以通过VPN登陆。 \nWebVpn系统（在校外访问内?必备）： https://webvpn.bupt.edu.cn/login以及https://libcon.bupt.edu.cn/  \n北邮人bt(只有ipv6才能访问)： http://byr.pt \n信息门户： http://my.bupt.edu.cn/ \n教务系统： https://jwgl.bupt.edu.cn/jsxsd/ \n" +
-                "北邮人论坛： https://bbs.byr.cn/\n图书馆预约： http://order.bupt.edu.cn/\n爱课堂： https://iclass.bupt.edu.cn/  \n22招生宣传： https://mp.weixin.qq.com/s/2hcgfdnDalK9MpHZzLnPCA",true);
-    }
-    @OnGroup
     @Filter(value = "海南学院",matchType = MatchType.EQUALS)
     public void hainan(GroupMsg groupMsg, Sender sender){
         System.out.println(groupMsg.getAccountInfo().getAccountCode()+"发送了"+groupMsg.getMsg()+"希望获得bupt帮助");
@@ -476,12 +543,9 @@ public class MyGroupListen {
 
     @OnGroup
     public void IDCheck(GroupMsg groupMsg,Sender sender) {
-        /*if(!"745769821".equals(groupMsg.getGroupInfo().getGroupCode())){
+        /*if(new Random().nextInt(5)!=1) {
             return;
         }*/
-        if(new Random().nextInt(5)!=1) {
-            return;
-        }
         if(!"475954521".equals(groupMsg.getGroupInfo().getGroupCode())){
             return;
         }
@@ -578,34 +642,12 @@ public class MyGroupListen {
         }
         System.out.println("图片"+idindex + "当前评价为" + myProduce.evaluation.get(idindex));
     }
-    @OnGroup
-    @Filter(value = "up",matchType = MatchType.CONTAINS)
-    public void VoteUp(GroupMsg groupMsg){
-        // 获取消息正文。
-        System.out.println("进入downvote");
-        String s=groupMsg.getMsg(),vote=groupMsg.getText().toLowerCase();
-        StringBuilder res=new StringBuilder();
-        GroupAccountInfo info=groupMsg.getAccountInfo();
-        int idindex=s.indexOf("netPID")+6;
-        if(idindex==7||!s.startsWith("[CAT:quote")) {
-            return;
-        }
-        System.out.println(s);
-        while (Character.isDigit(s.charAt(idindex))){
-            res.append(s.charAt(idindex++));
-        }
-        idindex=Integer.parseInt(res.toString());
-        if(vote.indexOf("up")!=-1) {
-            myProduce.evaluation.put(idindex,myProduce.evaluation.get(idindex)+1);
-            System.out.println(info.getAccountNickname()+"("+info.getAccountCode()+")对id为"+idindex+"的图片做出了+1的评价");
-
-        } else if(vote.indexOf("down")!=-1) {
-            myProduce.evaluation.put(idindex,myProduce.evaluation.get(idindex)-1);
-            System.out.println(info.getAccountNickname()+"("+info.getAccountCode()+")对id为"+idindex+"的图片做出了-1的评价");
-        }
-        System.out.println("图片"+idindex + "当前评价为" + myProduce.evaluation.get(idindex));
-    }
     */
+    @OnGroup
+    public void VoteUp(GroupMsg groupMsg){
+        System.out.println("content：        "+groupMsg.getMsgContent());
+        System.out.println(groupMsg.getMsg()+"\n");
+    }
     @OnGroup
     @Filter(value = "del",matchType = MatchType.CONTAINS)
     public void delete(GroupMsg groupMsg, Setter setter){
@@ -689,6 +731,7 @@ public class MyGroupListen {
         System.err.println("有撤回消息：\nMsg:");
         String str=groupMsg.getMsg();
         System.out.println(str);
+
         List<Neko> imageCats = groupMsg.getMsgContent().getCats("image");
         System.out.println("img counts: " + imageCats.size());
         AccountInfo accountInfo = groupMsg.getAccountInfo();

@@ -33,12 +33,17 @@ public class MyPrivateListen {
     static Pattern number =Pattern.compile("\\b\\d+");//1324364 etc.
     static Pattern p3=Pattern.compile("name:\\w+");//name:xxxxxx
     static Pattern Dice=Pattern.compile("\\d+(d|D)\\d+");//aDb;adb
+    public static final int e97=1000000007;
     /**
      * 通过依赖注入获取一个 "消息正文构建器工厂"。
      *
      */
     @Depend
     private MessageContentBuilderFactory messageContentBuilderFactory;
+    @Depend
+    MyProduce myProduce;
+    @Depend
+    QRCode q;
 
     /**
      * 此监听函数监听一个私聊消息，并会复读这个消息，然后再发送一个表情。
@@ -58,21 +63,21 @@ public class MyPrivateListen {
         // 获取消息正文。
         System.out.println(privateMsg.getAccountInfo().getAccountCode()+"发送了"+privateMsg.getMsg()+"要求一张涩图");
         CatCodeUtil util = CatCodeUtil.INSTANCE;
-        int id= MyProduce.idleId.pollLast();
-        String path= MyProduce.netPicPath +id+".jpg";
+        int id= myProduce.idleId.pollLast();
+        String path= myProduce.netPicPath +id+".jpg";
         Random r=new Random(25);
 
         int k=r.nextInt(100);
         if(k>=50) {
-            MyProduce.down( "https://api.ixiaowai.cn/api/api.php",path);
+            myProduce.down( "https://api.ixiaowai.cn/api/api.php",path);
         } else {
-            MyProduce.down("https://api.ghser.com/random/pc.php",path);
+            myProduce.down("https://api.ghser.com/random/pc.php",path);
         }
         // 构建image, 第二个参数为true代表参数值需要进行转义
         String image = util.toCat("image", true,"file="+path);
         // 多个CAT码、CAT码与文本消息之间直接进行拼接
         sender.sendPrivateMsg(privateMsg,"localPID"+id +":"+ image);
-        MyProduce.evaluation.put(id,0);
+        myProduce.evaluation.put(id,0);
         /*
         // 向 privateMsg 的账号发送消息，消息为当前接收到的消息。
         //sender.sendPrivateMsg(privateMsg, msgContent);
@@ -120,27 +125,26 @@ public class MyPrivateListen {
     @OnPrivate
     @Filter(value = "/qr",matchType = MatchType.STARTS_WITH)
     public void QRCode(PrivateMsg privatemsg, Sender sender) {
-        String msg=privatemsg.getMsg();
-        boolean onlyPrivate= msg.contains("private"),auth= MyProduce.getAuth(privatemsg.getAccountInfo().getAccountCode(),"basic",true);
-        System.out.println(privatemsg.getAccountInfo().getAccountCode()+"发送了"+msg+"要求二维码识别");
+        String msg=privatemsg.getMsg(),code=privatemsg.getAccountInfo().getAccountCode();
+        boolean auth=myProduce.getAuth(code,"basic",true);
+        System.out.println(code+"发送了"+msg+"要求二维码识别");
         MessageContent msgContent = privatemsg.getMsgContent();
-        QRCode q=new QRCode();
         //获取所有图片链接并得到其中的二维码识别结果
         HashSet<String> urls=new HashSet<>();
         List<Neko> imageCats = msgContent.getCats("image");
         System.out.println("img counts: " + imageCats.size());
         for (Neko image : imageCats) {
             String s=image.get("url");
-            if(MyProduce.VisQR.containsKey(s)){
-                urls.add(MyProduce.VisQR.get(s));
+            if(myProduce.VisQR.containsKey(s)){
+                urls.add(myProduce.VisQR.get(s));
                 continue;
             }
-            String res=q.UrlQRCode(s,"24.652669a8ede8960f58e74153016bf9b8.2592000.1654897645.282335-25939155");
+            String res=q.UrlQRCode(s);
             Matcher m1=p1.matcher(res);
             while ((m1.find())) {
                 res=m1.group().substring(8);
                 urls.add(res);
-                MyProduce.VisQR.put(s,res);
+                myProduce.VisQR.put(s,res);
             }
         }
         StringBuilder sb=new StringBuilder();
@@ -148,28 +152,65 @@ public class MyPrivateListen {
         for (String url : urls) {
             if(DownLoad.isConnect(url)) {
                 if(sb.length()+url.length()<950) {
+                    sb.append("有效："+url+"\n");
+                }else{
+                    myProduce.sendMsg(privatemsg,sender,sb.toString(),auth);
+                    sb=new StringBuilder(url+"\n");
+                }
+            }else{
+                if(sb.length()+url.length()<950) {
                     sb.append(url+"\n");
                 }else{
-                    MyProduce.sendMsg(privatemsg,sender,sb.toString(),auth);
+                    myProduce.sendMsg(privatemsg,sender,sb.toString(),auth);
                     sb=new StringBuilder(url+"\n");
                 }
             }
         }
-        MyProduce.sendMsg(privatemsg,sender,sb.toString(),auth);
+        myProduce.sendMsg(privatemsg,sender,sb.toString(),auth);
     }
 
     @OnPrivate
     @Filter(value = "/lr",matchType = MatchType.STARTS_WITH)
     public void getRandomLocalPic(PrivateMsg privatemsg, Sender sender) {
         // 获取消息正文。
-        String text = privatemsg.getText().trim(),code=privatemsg.getAccountInfo().getAccountCode();
-        boolean onlyPrivate = text.contains("private"),auth= MyProduce.getAuth(code,"pic",true);
+        String text = privatemsg.getText().trim();
+        boolean auth= myProduce.getAuth(privatemsg.getAccountInfo().getAccountCode(),"pic",true);
         int num = 1;
         Matcher m= number.matcher(text);
         if(m.find()) {
             num = Integer.parseInt(m.group().trim());
         }
-        String flag = "localPic";
+        if(!privatemsg.getAccountInfo().getAccountCode().equals("1154459434")){
+            num=Math.min(num,5);
+        }
+        LocalPicMethod1(privatemsg,sender,text,auth,num);
+    }
+    @OnPrivate
+    @Filter(value = "来点",matchType = MatchType.STARTS_WITH)
+    public void RandomLocalPicReuse(PrivateMsg privateMsg, Sender sender) {
+        // 获取消息正文。
+        String text = privateMsg.getText().trim();
+        if(!text.endsWith("涩图")&&!text.endsWith("色图")) {
+            return;
+        }
+        text=text.replace("来点"," ").replace("涩图"," ").replace("色图"," ");
+        boolean auth=myProduce.getAuth(privateMsg.getAccountInfo().getAccountCode(),"pic",true);
+        int num = 3;
+
+        LocalPicMethod1(privateMsg, sender, text, auth, num);
+    }
+
+    private void LocalPicMethod1(PrivateMsg privateMsg, Sender sender, String text, boolean auth, int num) {
+        String flag = "localPic",code=privateMsg.getAccountInfo().getAccountCode();
+
+        int times=myProduce.localPicSended.getOrDefault(code,0);
+        if(times>30){
+            if(times!=e97){
+                myProduce.sendMsg(privateMsg, sender,MyProduce.ToMoreMsg,auth);
+                myProduce.localPicSended.put(code,e97);
+            }
+        }
+
         if (text.contains("ff")) {
             flag = "ff14";
         }else if(text.contains("福利姬")){
@@ -180,31 +221,37 @@ public class MyPrivateListen {
         }
         if (text.contains("h")) {
             flag += "h";
-            auth= MyProduce.getAuth(privatemsg.getAccountInfo().getAccountCode(),"r18");
+            auth= myProduce.getAuth(code,"r18",true);
         }
-        picFolderInfo folderInfo= MyProduce.getFolderPath(flag);
-        System.out.println(privatemsg.getAccountInfo().getAccountCode() + "发送了" + privatemsg.getMsg() + "要求" + num + "张"+flag+"图片");
+        if(!auth){
+            return;
+        }
+        picFolderInfo folderInfo=myProduce.getFolderPath(flag);
+        System.out.println("用户"+code + "发送了" + privateMsg.getMsg() + "要求" + num + "张"+flag+"图片");
         StringBuilder sb = new StringBuilder();
         CatCodeUtil util = CatCodeUtil.INSTANCE;
-        int size = MyProduce.localSize, id;
+        int size = myProduce.localSize, id;
         Random r = new Random();
         for (int i = 0; i < num; i++) {
             id = r.nextInt(folderInfo.size());
             String image = util.toCat("image", true, "file=" + folderInfo.get(id));
             String name=folderInfo.getName(id);
             System.out.println("图片" + name);
-            if(!folderInfo.get(id).contains("福利姬")){
+            if(flag.contains("local")){
                 sb.append("name:").append(name);
             }
             sb.append(image);
-            MyProduce.setSendPicPath(name,folderInfo.get(id));
-            MyProduce.sendMsg(privatemsg, sender, sb.toString(),auth);
+            myProduce.setSendPicPath(name,folderInfo.get(id));
+            times++;
+            myProduce.sendMsg(privateMsg, sender, sb.toString(),auth);
             sb=new StringBuilder();
             if(!auth){
                 return;
             }
         }
-        MyProduce.sendMsg(privatemsg, sender, sb.toString(),auth);
+        myProduce.sendMsg(privateMsg, sender, sb.toString(),auth);
+        myProduce.localPicSended.put(code, times);
+        System.out.println(code + "已发送" + times + "本地图片\n\n");
     }
 
     @OnPrivate
@@ -222,7 +269,7 @@ public class MyPrivateListen {
         builder.append(" 5、”/r [x]“随机[1,x],默认x=100\n");
         builder.append(" 实在拉胯的图回复del可删除");
         builder.append(" 消息最后包含“private”则只发送私聊,没反应就是图被ban了/没给这群开");
-        MyProduce.sendMsg(groupMsg,sender,builder.toString(),auth);
+        myProduce.sendMsg(groupMsg,sender,builder.toString(),auth);
     }
 
     @OnPrivate
@@ -232,7 +279,7 @@ public class MyPrivateListen {
         if(!privateMsg.getAccountInfo().getAccountCode().equals("1154459434")) {
             return;
         }
-        MyProduce.finish();
+        myProduce.finish();
     }
     @OnPrivate
     public void VoteNetPic(PrivateMsg privateMsg, Sender sender){
@@ -248,13 +295,13 @@ public class MyPrivateListen {
         }
         idindex=Integer.parseInt(res);
         if(vote.indexOf("up")!=-1) {
-            MyProduce.evaluation.replace(idindex, MyProduce.evaluation.get(idindex)+1);
+            myProduce.evaluation.replace(idindex, myProduce.evaluation.get(idindex)+1);
             System.out.println(privateMsg.getAccountInfo().getAccountCode()+"对id为"+idindex+"的图片做出了+1的评价");
 
         } else if(vote.indexOf("down")!=-1) {
-            MyProduce.evaluation.replace(idindex, MyProduce.evaluation.get(idindex)-1);
+            myProduce.evaluation.replace(idindex, myProduce.evaluation.get(idindex)-1);
             System.out.println(privateMsg.getAccountInfo().getAccountCode()+"对id为"+idindex+"的图片做出了-1的评价");
         }
-        System.out.println("图片"+idindex + "当前评价为" + MyProduce.evaluation.get(idindex));
+        System.out.println("图片"+idindex + "当前评价为" + myProduce.evaluation.get(idindex));
     }
 }

@@ -116,7 +116,7 @@ public class MyNewGroupMemberListen {
      * @param sender              既然是”迎新“示例，则当然要发消息。
      * @see GroupMemberIncrease
      */
-    @OnGroupMemberIncrease
+    //@OnGroupMemberIncrease
     public void newGroupMember(GroupMemberIncrease groupMemberIncrease, Sender sender) {
         // 得到一个消息构建器。
         MessageContentBuilder builder = messageBuilderFactory.getMessageContentBuilder();
