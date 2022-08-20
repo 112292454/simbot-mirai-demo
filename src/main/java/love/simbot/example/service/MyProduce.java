@@ -1,17 +1,30 @@
-package love.simbot.example;
+package love.simbot.example.service;
 
+import DownloadTools.DownLoad;
 import DownloadTools.QRCode;
 import catcode.CatCodeUtil;
-import love.forte.common.ioc.annotation.Beans;
-import love.forte.simbot.api.message.events.GroupMsg;
 import love.forte.simbot.api.message.events.PrivateMsg;
 import love.forte.simbot.api.sender.Sender;
+import love.forte.simbot.event.GroupMessageEvent;
+import love.forte.simbot.message.Message;
+import love.forte.simbot.message.Messages;
+import love.forte.simbot.message.Text;
+import love.forte.simbot.resources.Resource;
+import love.simbot.example.component.InfoFactory;
+import love.simbot.example.component.authority;
+import love.simbot.example.component.picFolderInfo;
+import love.simbot.example.pic.dao.PicDao;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
-@Beans
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
+@Component
 public class MyProduce {
 	public static HashMap<Integer, Integer> evaluation = new HashMap<>();
 	public static Deque<Integer> idleId = new LinkedList<>();
@@ -30,14 +43,17 @@ public class MyProduce {
 	public HashMap<String, Integer> sendedTimes = new HashMap<>();
 	public HashMap<String, Boolean> warned = new HashMap<>();
 	public HashMap<String, Integer> localPicSended = new HashMap<>();
-	static long min = System.currentTimeMillis() / 60000;
+	public static long min = System.currentTimeMillis() / 60000;
 
-	@Beans
+	@Bean
 	public QRCode qrCode(){
 		return new QRCode().setToken();
 	}
 
-	public MyProduce() {
+	@Autowired
+	InfoFactory infoFactory;
+
+	public MyProduce(InfoFactory infoFactory) {
 		HashSet<Integer> usedIndex = new HashSet<>();
 		try {
 			//得到已有网络图片的评价信息
@@ -55,15 +71,16 @@ public class MyProduce {
 			}
 			in.close();
 			//创建几个文件夹的图片名信息
-			folder.put("ff14h", new picFolderInfo("ff14h", "D:\\新建文件夹\\ff14\\h"));
-			folder.put("ff14", new picFolderInfo("ff14", "D:\\新建文件夹\\ff14\\nonh"));
-			folder.put("localPic", new picFolderInfo("localPic", "D:\\botPic\\pixivDownLoad"));
-			folder.put("localPich", new picFolderInfo("localPich", "D:\\botPic\\pixivh"));
-			folder.put("netPic", new picFolderInfo("netPic", "D:\\botPic\\randomPicSave"));
-			folder.put("伪娘", new picFolderInfo("伪娘", "D:\\新建文件夹\\伪娘"));
-			folder.put("福利姬", new picFolderInfo("福利姬", "D:\\新建文件夹\\福利姬"));
-			folder.put("贴贴", new picFolderInfo("贴贴", "D:\\botPic\\贴贴"));
-			System.err.println("图片文件夹信息读取完毕");
+			//  folder.put("ff14h",infoFactory.makeInfo("ff14h", "D:\\新建文件夹\\ff14\\h"));
+			//  folder.put("ff14", infoFactory.makeInfo("ff14", "D:\\新建文件夹\\ff14\\nonh"));
+			//  folder.put("localPic",infoFactory.makeInfo("localPic", "D:\\botPic\\pixivDownLoad"));
+			//  folder.put("localPich",infoFactory.makeInfo("localPich", "D:\\botPic\\pixivh"));
+			//  folder.put("netPic", infoFactory.makeInfo("netPic", "D:\\botPic\\randomPicSave"));
+			//  folder.put("伪娘",infoFactory.makeInfo("伪娘", "D:\\新建文件夹\\伪娘"));
+			//  folder.put("福利姬",infoFactory.makeInfo("福利姬", "D:\\新建文件夹\\福利姬"));
+			//  folder.put("miku", infoFactory.makeInfo("miku", "D:\\新建文件夹\\Miku"));
+			//  folder.put("贴贴", infoFactory.makeInfo("贴贴", "D:\\botPic\\贴贴"));
+			//  System.err.println("图片文件夹信息读取完毕");
 			groupAuth = new authority(true);
 			userAuth = new authority(false);
 		} catch (FileNotFoundException e) {
@@ -71,14 +88,16 @@ public class MyProduce {
 		}
 	}
 
-	public boolean getAuth(GroupMsg groupMsg, String level) {
-		String code=groupMsg.getGroupInfo().getGroupCode(),user=groupMsg.getAccountInfo().getAccountCode();
-		return groupAuth.haveAuth(code, level);
+	public boolean getAuth(GroupMessageEvent groupMsg, String level) {
+		String code=groupMsg.getGroup().getId().toString(),user=groupMsg.getAuthor().getId().toString();
+		return groupAuth.haveAuth(code, level)||userAuth.haveAuth(user,"admin");
 	}
 
 	public boolean getAuth(String id, String level, boolean isUser) {
-		return userAuth.haveAuth(id, level);
+		if(isUser) return userAuth.haveAuth(id, level);
+		else return groupAuth.haveAuth(id,level);
 	}
+
 
 	public picFolderInfo getFolderPath(String s) {
 		return folder.get(s);
@@ -124,7 +143,8 @@ public class MyProduce {
 	public void down(String url, String path) {
 		File file = new File(path);
 		try {
-			BufferedInputStream in = new BufferedInputStream(new URL(url).openStream());
+
+			BufferedInputStream in = new BufferedInputStream(DownLoad.getUrlInputStream(url));
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
 			byte[] temp = new byte[2048];
 			int len = in.read(temp);
@@ -139,9 +159,16 @@ public class MyProduce {
 		}
 	}
 
-	public void sendMsg(GroupMsg groupMsg, Sender sender, String msg, boolean haveAuth) {
-		String code = groupMsg.getGroupInfo().getGroupCode(), userID = groupMsg.getAccountInfo().getAccountCode();
-		if (msg == null) {
+	public void sendMsg(GroupMessageEvent groupMsg, Message.Element<?> element, boolean haveAuth) {
+		System.out.println("element.toString() = " + element.toString());
+		System.out.println("element.getKey() = " + element.getKey());
+		//if(element.toString())
+		this.sendMsg(groupMsg,Messages.toMessages(element), haveAuth);
+	}
+
+	public void sendMsg(GroupMessageEvent groupMsg, Messages msg, boolean haveAuth) {
+		String code = groupMsg.getGroup().getId().toString(), userID =groupMsg.getAuthor().getId().toString();
+		if (msg == null||msg.size()==0) {
 			return;
 		}
 
@@ -150,25 +177,41 @@ public class MyProduce {
 		//check times
 		if ("1154459434".equals(userID) || msg.contains("file")) {
 			//可以发送
-		} else if (!sended && RTimes >= 3) {//未警告且已达3次
+		} else if (!sended && RTimes > 3) {//未警告且已达3次
 			warned.put(code, true);
-			String image = util.toCat("image", true, "file=" + "D:\\botPic\\z.jpg");
-			sender.sendGroupMsg(code,image + "不可以压榨bot");
+			msg=Messages.toMessages(
+					groupMsg.getBot().uploadImageBlocking(Resource.of(new File("D:\\botPic\\z.jpg")))
+			,Text.of( "不可以压榨bot"));
+			groupMsg.getGroup().sendBlocking(msg);
 			return;
 		} else if (sended) {//达五次已警告，不管
 			return;
 		}
-
-		if(!msg.contains("file")&&!msg.equals("")){
-			RTimes++;
-			sendedTimes.put(code, RTimes);
-		}
+		System.out.println("msg = " + msg);
+		/*
+		for (Message.Element<?> element : msg) {
+			if(element.toString().contains("file")){
+				RTimes--;
+			}else {
+				RTimes++;
+			}
+		}*/
+		RTimes++;
+		RTimes=max(0,RTimes);
+		sendedTimes.put(code, RTimes);
 
 		System.out.println("群" + code + "当前一分钟内发言次数" + RTimes);
-		if (("1154459434".equals(userID) || haveAuth)&&msg.length()>0) {
-			sender.sendGroupMsg(code, msg);
+		if ((/*"1154459434".equals(userID) ||*/ haveAuth)&&msg.size()>0) {
+			try {
+				groupMsg.getGroup().sendIfSupportBlocking(msg);
+			} catch (IllegalArgumentException ignoreE) {
+
+			}catch (Exception e){
+				e.printStackTrace();
+			}
+			//sender.sendGroupMsg(code, msg);
 		} else if (!haveAuth) {
-			sender.sendGroupMsg(code, DefaultMsg);
+			groupMsg.getGroup().sendBlocking(Messages.toMessages(Text.of(DefaultMsg)));
 		}
 	}
 

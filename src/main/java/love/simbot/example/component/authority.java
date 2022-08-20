@@ -1,4 +1,4 @@
-package love.simbot.example;
+package love.simbot.example.component;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -72,6 +72,6 @@ public class authority {
 				break;
 		}
 		System.out.println("群" + id + "要求" + level + "权限,结果为："+(auth.getOrDefault(id,0)>=l));
-		return auth.getOrDefault(id,isGroup?0:2)>=l;
+		return auth.getOrDefault(id,isGroup?1:2)>=l;
 	}
 }

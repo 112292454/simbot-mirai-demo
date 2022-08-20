@@ -12,6 +12,8 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <simbot.version>2.4.0</simbot.version>
+        <kotlin.version>1.7.10</kotlin.version>
+        <serialization.version>1.4.0-RC</serialization.version>
     </properties>
 
     <dependencyManagement>
@@ -28,9 +30,6 @@
 
     <dependencies>
 
-
-
-
         <!-- mirai组件 -->
         <dependency>
             <groupId>love.forte.simbot.component</groupId>
@@ -43,9 +42,19 @@
             <version>3.0.0.preview.11.1</version>
         </dependency>
         <dependency>
+            <groupId>love.forte.simbot.boot</groupId>
+            <artifactId>simboot-core</artifactId>
+            <version>3.0.0.preview.11.1</version>
+        </dependency>
+        <dependency>
             <groupId>love.forte.simple-robot</groupId>
             <artifactId>component-mirai</artifactId>
             <version>${simbot.version}</version><!--vv-->
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-serialization-json</artifactId>
+            <version>${serialization.version}</version>
         </dependency>
         <!-- 定时任务模块 -->
         <dependency>
@@ -68,6 +77,12 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!--分词-->
+        <dependency>
+            <groupId>com.huaban</groupId>
+            <artifactId>jieba-analysis</artifactId>
+            <version>1.0.2</version>
+        </dependency>
 
 
 
@@ -85,6 +100,10 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
         <!-- 定时任务 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -95,6 +114,7 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <scope>runtime</scope>
+            <version>8.0.11</version>
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>
@@ -106,6 +126,22 @@
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>1.3.2</version>
+        </dependency>
+        <!-- redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.lettuce</groupId>
+                    <artifactId>lettuce-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- redis相关操作组件jedis，取代上面的lettuce -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
         </dependency>
         <!-- @Data自动生成getter等 -->
         <dependency>
@@ -121,6 +157,18 @@
             <groupId>love.forte.simple-robot</groupId>
             <artifactId>api</artifactId>
             <version>2.3.4</version>
+        </dependency>
+
+        <!--词云-->
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo-core</artifactId>
+            <version>1.13</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo-tokenizers</artifactId>
+            <version>1.12</version>
         </dependency>
 
     </dependencies>
@@ -143,6 +191,32 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <compilerPlugins>
+                        <plugin>kotlinx-serialization</plugin>
+                    </compilerPlugins>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-serialization</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>

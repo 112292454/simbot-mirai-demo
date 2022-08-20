@@ -6,15 +6,20 @@ import catcode.CatCodeUtil;
 import catcode.Neko;
 import love.forte.common.ioc.annotation.Beans;
 import love.forte.common.ioc.annotation.Depend;
+import love.forte.simboot.annotation.Listener;
 import love.forte.simbot.annotation.Filter;
 import love.forte.simbot.annotation.OnPrivate;
 import love.forte.simbot.api.message.MessageContent;
 import love.forte.simbot.api.message.MessageContentBuilderFactory;
 import love.forte.simbot.api.message.events.PrivateMsg;
 import love.forte.simbot.api.sender.Sender;
+import love.forte.simbot.event.FriendMessageEvent;
 import love.forte.simbot.filter.MatchType;
-import love.simbot.example.MyProduce;
-import love.simbot.example.picFolderInfo;
+import love.simbot.example.pic.dao.PicDao;
+import love.simbot.example.service.MyProduce;
+import love.simbot.example.component.picFolderInfo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
@@ -27,7 +32,7 @@ import java.util.regex.Pattern;
  * 所有需要被管理的类都需要标注 {@link Beans} 注解。
  * @author ForteScarlet
  */
-@Beans
+@Component
 public class MyPrivateListen {
     static Pattern p1= Pattern.compile("text\":.\"[^\"]+");//text":4"xxxxxx
     static Pattern number =Pattern.compile("\\b\\d+");//1324364 etc.
@@ -57,6 +62,13 @@ public class MyPrivateListen {
      * 当然，你也可以使用 {@link love.forte.simbot.api.sender.MsgSender}，
      * 然后 {@code msgSender.SENDER}.
      */
+
+    @Listener
+    public void tempReply(FriendMessageEvent event){
+        event.replyBlocking("结构修改中，暂时停用私聊功能");
+    }
+
+
     @OnPrivate
     @Filter(value = "/ir",matchType = MatchType.STARTS_WITH)
     public void getRandomNetPic(PrivateMsg privateMsg, Sender sender){
@@ -185,6 +197,7 @@ public class MyPrivateListen {
         }
         LocalPicMethod1(privatemsg,sender,text,auth,num);
     }
+
     @OnPrivate
     @Filter(value = "来点",matchType = MatchType.STARTS_WITH)
     public void RandomLocalPicReuse(PrivateMsg privateMsg, Sender sender) {
@@ -200,6 +213,8 @@ public class MyPrivateListen {
         LocalPicMethod1(privateMsg, sender, text, auth, num);
     }
 
+    @Autowired
+    PicDao picDao;
     private void LocalPicMethod1(PrivateMsg privateMsg, Sender sender, String text, boolean auth, int num) {
         String flag = "localPic",code=privateMsg.getAccountInfo().getAccountCode();
 

@@ -1,13 +1,13 @@
 package love.simbot.example;
 
-import love.forte.common.ioc.annotation.Beans;
+import love.forte.simboot.core.SimbootApplication;
+import love.forte.simboot.listener.BindException;
 import love.forte.simboot.spring.autoconfigure.EnableSimbot;
-import love.forte.simbot.annotation.SimbotApplication;
-import love.forte.simbot.annotation.SimbotResource;
-import love.forte.simbot.core.SimbotApp;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 /**
@@ -31,12 +31,12 @@ import org.springframework.context.annotation.Bean;
 })*/
 //@SimbotApplication
 @SpringBootApplication
+//@SimbootApplication
 @EnableSimbot
+@EnableBatchProcessing
+@EnableScheduling
 public class SimbotExampleApplication {
-    @Bean
-    public MyProduce myproduce(){
-        return new MyProduce();
-    }
+
 
     public static void main(String[] args) {
         SpringApplication.run(SimbotExampleApplication.class,args);

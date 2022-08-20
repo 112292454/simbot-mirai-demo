@@ -1,4 +1,4 @@
-package love.simbot.example;
+package love.simbot.example.batch;
 
 import love.simbot.example.pic.component.PicPath;
 import org.springframework.batch.core.Job;
@@ -25,12 +25,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 
-//@Configuration
-@EnableBatchProcessing
+@Configuration
+//@EnableBatchProcessing
 public class BatchConfig {
 
 	//数据的读取
@@ -39,7 +40,7 @@ public class BatchConfig {
 	FlatFileItemReader<PicPath> itemReader(@Value("#{jobParameters['path']}") String path) {
 		FlatFileItemReader<PicPath> reader = new FlatFileItemReader<>();
 		//配置文件位置
-		reader.setResource(new ClassPathResource(path));
+		reader.setResource(new FileSystemResource(path));
 		// 通过setLineMapper方法设置每一行的数据信息
 		reader.setLineMapper(new DefaultLineMapper<PicPath>() {{
 			setLineTokenizer(new DelimitedLineTokenizer() {{
@@ -71,8 +72,8 @@ public class BatchConfig {
 		JdbcBatchItemWriter writer = new JdbcBatchItemWriter();
 		// 配置使用的数据源
 		writer.setDataSource(dataSource);
-		writer.setSql("insert into localpicpath(id,path,kind) " +
-				"values(:id,:path,:kind)");
+		writer.setSql("insert into picpath(path,kind) " +
+				"values(:path,:kind)");
 		writer.setItemSqlParameterSourceProvider(
 				new BeanPropertyItemSqlParameterSourceProvider<>());
 		return writer;
@@ -87,7 +88,7 @@ public class BatchConfig {
 		return jobRepositoryFactoryBean.getObject();
 	}
 
-	@Bean
+	@Bean(name = "myLauncher")
 	public SimpleJobLauncher jobLauncher(DataSource dataSource, PlatformTransactionManager transactionManager)throws Exception{
 		SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
 		jobLauncher.setJobRepository(JobRepository(dataSource, transactionManager));
@@ -111,7 +112,7 @@ public class BatchConfig {
 			, ItemProcessor<PicPath, PicPath>processor) {
 		// Step通过stepBuilderFactory进行配置
 		return stepBuilderFactory.get("myStep") //Step的name
-				.<PicPath, PicPath>chunk(2)
+				.<PicPath, PicPath>chunk(51200)
 				.reader(reader)
 				.processor(processor)
 				.writer(writer)

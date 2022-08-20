@@ -7,5 +7,11 @@
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
       <jdbc-url>jdbc:mysql://localhost:3306/userbase</jdbc-url>
     </data-source>
+    <data-source source="LOCAL" name="nacos_config@localhost" uuid="b938ffee-42c8-4ed3-8d1e-b43a71be0963">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://localhost:3306/nacos_config</jdbc-url>
+    </data-source>
   </component>
 </project>

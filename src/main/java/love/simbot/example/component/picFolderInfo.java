@@ -1,4 +1,7 @@
-package love.simbot.example;
+package love.simbot.example.component;
+
+import love.simbot.example.batch.BatchController;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -16,11 +19,14 @@ public class picFolderInfo {
 	private final String folder;
 	private int nums=0;
 	private String kind;
+
+	@Autowired
+	BatchController controller;
 	public picFolderInfo(String kind,String folderPath) {
 		folder=folderPath;
 		this.kind=kind;
 		try {
-			new BatchController().batch(folderPath,kind);
+			//controller.batch(folderPath+"\\info.txt",kind);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -50,7 +56,7 @@ public class picFolderInfo {
 				FileWriter fw=new FileWriter(info);
 				PicPath.forEach((k, v)->{
 					try {
-						fw.write(k+" "+v+"\n");
+						fw.write(k+" "+v.replaceAll(" ", "")+"\n");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
