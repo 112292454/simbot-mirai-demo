@@ -8,10 +8,18 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="simbot-mirai-demo" />
+        <module name="common-api" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="simbot-mirai-demo" target="8" />
+    <bytecodeTargetLevel target="17">
+      <module name="common-api" target="1.8" />
+      <module name="simbot-mirai-demo" target="1.8" />
     </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="common-api" options="-parameters" />
+      <module name="simbot-mirai-demo" options="" />
+    </option>
   </component>
 </project>

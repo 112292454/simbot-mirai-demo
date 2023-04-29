@@ -2,12 +2,12 @@ package love.simbot.example.service;
 
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
-import love.forte.simbot.Bot;
-import love.forte.simbot.message.*;
+import love.forte.simbot.message.Image;
+import love.forte.simbot.message.Message;
+import love.forte.simbot.message.Messages;
+import love.forte.simbot.message.Text;
 import love.forte.simbot.resources.Resource;
 import love.simbot.example.component.UrlUtil;
-import net.mamoe.mirai.message.data.ForwardMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -17,8 +17,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
@@ -63,7 +63,7 @@ public class PicSources {
 
 
 	}
-	public ArrayList<Messages> getPicSource(Image image, Bot bot) throws MalformedURLException {
+	public ArrayList<Messages> getPicSource(Image image) throws MalformedURLException {
 		Messages sendMessages=Messages.emptyMessages();
 		String response="",request=image.getResource().getName();
 		request= UrlUtil.getURLEncoderString(request);
@@ -108,7 +108,7 @@ public class PicSources {
 			});
 
 			Map<String,Message.Element<?>> res=new HashMap<>();
-			res.put("thumbnail", bot.uploadImageBlocking(Resource.of(new URL(header.get("thumbnail")))));
+			res.put("thumbnail", Image.of(Resource.of(new URL(header.get("thumbnail")))));
 			res.put("similarity", Text.of(header.get("similarity")));
 			res.put("index_name", Text.of(header.get("index_name")));
 			for (Map.Entry entry : body.entrySet()) {
@@ -118,7 +118,7 @@ public class PicSources {
 			if ( sim> 85 && body.containsKey("pixiv_id")) {
 				sources.clear();
 				res.clear();
-				res.put("thumbnail",bot.uploadImageBlocking(Resource.of(new URL(header.get("thumbnail")))));
+				res.put("thumbnail",Image.of(Resource.of(new URL(header.get("thumbnail")))));
 				res.put("similarity", Text.of(header.get("similarity")));
 				res.put("index_name", Text.of(header.get("index_name")));
 				for (Map.Entry entry : body.entrySet()) {

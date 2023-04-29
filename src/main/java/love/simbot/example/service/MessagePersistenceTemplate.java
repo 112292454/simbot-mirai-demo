@@ -1,6 +1,7 @@
 package love.simbot.example.service;
 
 import com.huaban.analysis.jieba.JiebaSegmenter;
+import jakarta.annotation.Resource;
 import love.simbot.example.component.MessageDivision;
 import love.simbot.example.component.MyWordFrequency;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -8,7 +9,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;

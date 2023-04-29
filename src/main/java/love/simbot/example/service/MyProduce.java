@@ -1,11 +1,12 @@
 package love.simbot.example.service;
 
 import DownloadTools.DownLoad;
-import DownloadTools.QRCode;
+import DownloadTools.util.QRCodeUtil;
 import catcode.CatCodeUtil;
 import love.forte.simbot.api.message.events.PrivateMsg;
 import love.forte.simbot.api.sender.Sender;
 import love.forte.simbot.event.GroupMessageEvent;
+import love.forte.simbot.message.Image;
 import love.forte.simbot.message.Message;
 import love.forte.simbot.message.Messages;
 import love.forte.simbot.message.Text;
@@ -13,8 +14,6 @@ import love.forte.simbot.resources.Resource;
 import love.simbot.example.component.InfoFactory;
 import love.simbot.example.component.authority;
 import love.simbot.example.component.picFolderInfo;
-import love.simbot.example.pic.dao.PicDao;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +21,6 @@ import java.io.*;
 import java.util.*;
 
 import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 @Component
 public class MyProduce {
@@ -46,11 +44,11 @@ public class MyProduce {
 	public static long min = System.currentTimeMillis() / 60000;
 
 	@Bean
-	public QRCode qrCode(){
-		return new QRCode().setToken();
+	public QRCodeUtil QRCodeUtil(){
+		return new QRCodeUtil().setToken();
 	}
 
-	@Autowired
+//	@Autowired
 	InfoFactory infoFactory;
 
 	public MyProduce(InfoFactory infoFactory) {
@@ -136,7 +134,7 @@ public class MyProduce {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		folder.forEach((k, v) -> folder.put(k, v.refresh()));
+//		folder.forEach((k, v) -> folder.put(k, v.refresh()));
 		System.out.println("文件夹信息刷新完毕");
 	}
 
@@ -168,19 +166,19 @@ public class MyProduce {
 
 	public void sendMsg(GroupMessageEvent groupMsg, Messages msg, boolean haveAuth) {
 		String code = groupMsg.getGroup().getId().toString(), userID =groupMsg.getAuthor().getId().toString();
-		if (msg == null||msg.size()==0) {
+		if (msg == null||msg.getSize()==0) {
 			return;
 		}
 
 		boolean sended = warned.getOrDefault(code, false);
 		int RTimes = sendedTimes.getOrDefault(code, 0);
 		//check times
-		if ("1154459434".equals(userID) || msg.contains("file")) {
+		if ("1154459434".equals(userID) || msg.getFirstOrNull(Image.Key)!=null) {
 			//可以发送
 		} else if (!sended && RTimes > 3) {//未警告且已达3次
 			warned.put(code, true);
 			msg=Messages.toMessages(
-					groupMsg.getBot().uploadImageBlocking(Resource.of(new File("D:\\botPic\\z.jpg")))
+					Image.of(Resource.of(new File("D:\\botPic\\z.jpg")))
 			,Text.of( "不可以压榨bot"));
 			groupMsg.getGroup().sendBlocking(msg);
 			return;
@@ -201,9 +199,9 @@ public class MyProduce {
 		sendedTimes.put(code, RTimes);
 
 		System.out.println("群" + code + "当前一分钟内发言次数" + RTimes);
-		if ((/*"1154459434".equals(userID) ||*/ haveAuth)&&msg.size()>0) {
+		if ((/*"1154459434".equals(userID) ||*/ haveAuth)&&msg.getSize()>0) {
 			try {
-				groupMsg.getGroup().sendIfSupportBlocking(msg);
+				groupMsg.getGroup().sendBlocking(msg);
 			} catch (IllegalArgumentException ignoreE) {
 
 			}catch (Exception e){

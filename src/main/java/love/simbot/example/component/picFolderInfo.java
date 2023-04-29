@@ -1,21 +1,7 @@
 package love.simbot.example.component;
 
-import love.simbot.example.batch.BatchController;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Scanner;
-import java.util.stream.Stream;
-
 public class picFolderInfo {
-	private final HashMap<Integer,String> PicPath;
+/*	private final HashMap<Integer,String> PicPath;
 	private final String folder;
 	private int nums=0;
 	private String kind;
@@ -103,5 +89,5 @@ public class picFolderInfo {
 			return this;
 		}
 		return new picFolderInfo(folder, folder);
-	}
+	}*/
 }

@@ -1,13 +1,11 @@
 package love.simbot.example;
 
-import love.forte.simboot.core.SimbootApplication;
-import love.forte.simboot.listener.BindException;
 import love.forte.simboot.spring.autoconfigure.EnableSimbot;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import xyz.cssxsh.mirai.tool.FixProtocolVersion;
 
 
 /**
@@ -25,22 +23,23 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  *
  * @author ForteScarlet
  */
-/*@SimbotApplication({
-        @SimbotResource(value = "simbot.yml", orIgnore = true),
-        @SimbotResource(value = "simbot-dev.yml", orIgnore = true, command = "dev"),
-})*/
+//@SimbotApplication({
+//        @SimbotResource(value = "simbot.yml", orIgnore = true),
+//        @SimbotResource(value = "simbot-dev.yml", orIgnore = true, command = "dev"),
+//})
 //@SimbotApplication
 @SpringBootApplication
-//@SimbootApplication
+//@MapperScan(basePackages = "love.simbot.example")
 @EnableSimbot
 @EnableBatchProcessing
 @EnableScheduling
-public class SimbotExampleApplication {
+public class MyBot {
 
 
     public static void main(String[] args) {
-        SpringApplication.run(SimbotExampleApplication.class,args);
-        //SimbotApp.run(SimbotExampleApplication.class, args);
+        FixProtocolVersion.update();
+        SpringApplication.run(MyBot.class,args);
+//        SimbotApp.run(SimbotExampleApplication.class, args);
 
     }
 }

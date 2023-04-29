@@ -1,14 +1,11 @@
 package love.simbot.example.listener;
 
-import love.forte.common.ioc.annotation.Beans;
-import love.forte.common.ioc.annotation.Depend;
+
 import love.forte.simbot.annotation.OnGroupAddRequest;
 import love.forte.simbot.annotation.OnGroupMemberIncrease;
 import love.forte.simbot.api.message.MessageContent;
 import love.forte.simbot.api.message.MessageContentBuilder;
 import love.forte.simbot.api.message.MessageContentBuilderFactory;
-import love.forte.simbot.api.message.Reply;
-import love.forte.simbot.api.message.assists.Flag;
 import love.forte.simbot.api.message.containers.AccountInfo;
 import love.forte.simbot.api.message.containers.BotInfo;
 import love.forte.simbot.api.message.containers.GroupInfo;
@@ -18,6 +15,7 @@ import love.forte.simbot.api.sender.Sender;
 import love.forte.simbot.api.sender.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,13 +25,13 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author ForteScarlet
  */
-@Beans
+@Component
 public class MyNewGroupMemberListen {
 
     /**
      * 注入得到一个消息构建器工厂。
      */
-    @Depend
+    //@Depend
     private MessageContentBuilderFactory messageBuilderFactory;
 
     /**

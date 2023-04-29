@@ -4,23 +4,21 @@ package love.simbot.example.service;
 import com.kennycason.kumo.CollisionMode;
 import com.kennycason.kumo.WordCloud;
 import com.kennycason.kumo.WordFrequency;
-import com.kennycason.kumo.bg.CircleBackground;
 import com.kennycason.kumo.bg.RectangleBackground;
 import com.kennycason.kumo.font.KumoFont;
 import com.kennycason.kumo.font.scale.SqrtFontScalar;
-import com.kennycason.kumo.nlp.FrequencyAnalyzer;
-import com.kennycason.kumo.nlp.tokenizers.ChineseWordTokenizer;
-import com.kennycason.kumo.palette.LinearGradientColorPalette;
 import com.kennycason.kumo.image.AngleGenerator;
+import com.kennycason.kumo.palette.LinearGradientColorPalette;
+import jakarta.annotation.Resource;
 import love.simbot.example.component.MessageDivision;
 import love.simbot.example.component.MyWordFrequency;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.awt.*;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 

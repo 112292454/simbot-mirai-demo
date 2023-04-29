@@ -2,32 +2,27 @@ package love.simbot.example.listener;
 
 
 import DownloadTools.DownLoad;
-import DownloadTools.QRCode;
+import DownloadTools.util.QRCodeUtil;
 import catcode.CatCodeUtil;
 import com.google.gson.Gson;
-import com.huaban.analysis.jieba.JiebaSegmenter;
 import love.forte.di.annotation.Beans;
-import love.forte.simboot.filter.MatchType;
-import love.forte.simbot.Bot;
-import love.forte.simbot.Identifies;
-import love.forte.common.ioc.annotation.Depend;
 import love.forte.simboot.annotation.Filter;
 import love.forte.simboot.annotation.Listener;
-import love.forte.simbot.api.message.MessageContentBuilderFactory;
-
+import love.forte.simboot.filter.MatchType;
+import love.forte.simbot.Identifies;
 import love.forte.simbot.component.mirai.event.MiraiGroupMessageEvent;
 import love.forte.simbot.component.mirai.message.MiraiMessageParserUtil;
 import love.forte.simbot.event.GroupMessageEvent;
 import love.forte.simbot.message.*;
+import love.forte.simbot.resources.PathResource;
 import love.forte.simbot.resources.Resource;
 import love.simbot.example.component.UrlUtil;
+import love.simbot.example.group.component.GroupCode;
+import love.simbot.example.GroupDao;
 import love.simbot.example.pic.component.PicPath;
-import love.simbot.example.pic.dao.PicDao;
+import love.simbot.example.PicDao;
 import love.simbot.example.service.MessagePersistenceTemplate;
 import love.simbot.example.service.MyProduce;
-import love.simbot.example.group.component.GroupCode;
-import love.simbot.example.group.dao.GroupDao;
-import love.simbot.example.component.picFolderInfo;
 import love.simbot.example.service.MyWordCloud;
 import love.simbot.example.service.PicSources;
 import net.mamoe.mirai.contact.Group;
@@ -46,6 +41,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -76,14 +73,13 @@ public class MyGroupListen {
      * log
      */
     private static Logger LOG = LoggerFactory.getLogger(MyGroupListen.class);
-    @Depend
-    private MessageContentBuilderFactory builderFactory;
+
 
 
     @Autowired
     MyProduce myProduce;
     @Autowired
-    QRCode q;
+    QRCodeUtil q;
 
     private Messages getMsg(GroupMessageEvent groupMessageEvent) {
         return groupMessageEvent.getMessageContent().getMessages();
@@ -99,7 +95,7 @@ public class MyGroupListen {
      */
     @Listener
     @Filter(value = "/qr", matchType = MatchType.TEXT_STARTS_WITH)
-    public void QRCode(GroupMessageEvent groupMessageEvent) {
+    public void QRCodeUtil(GroupMessageEvent groupMessageEvent) {
         String msg = groupMessageEvent.getMessageContent().getPlainText();
         boolean auth = myProduce.getAuth(groupMessageEvent, "basic");
         System.out.println(groupMessageEvent.getAuthor().getId() + "发送了" + msg + "要求二维码识别");
@@ -179,8 +175,12 @@ public class MyGroupListen {
                 myProduce.down("https://api.ixiaowai.cn/api/api.php", path);
             }
             if (new File(path).exists()) {
+                //TODO:test new image
+                Path image = Paths.get("xxx/image.jpg");
+                PathResource resource = Resource.of(image);
+                ResourceImage imageResource =  Image.of(resource);
                 sendMessages = sendMessages.plus(
-                        groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File(path))));
+                       imageResource);
             }
             /*imgCount++;
             if(imgCount%5==0) {
@@ -267,7 +267,7 @@ public class MyGroupListen {
         }
 
         Messages sendMessage = Messages.emptyMessages();
-        picFolderInfo folderInfo = myProduce.getFolderPath(flag);
+//        picFolderInfo folderInfo = myProduce.getFolderPath(flag);
         System.out.println(code + "发送了" + groupMessageEvent.getMessageContent().getMessages() + "要求" + num + "张" + flag + "图片");
 
         StringBuilder sb = new StringBuilder();
@@ -281,7 +281,7 @@ public class MyGroupListen {
             }
             sendMessage = sendMessage.
                     plus(Text.of(sb.toString())).
-                    plus(groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File(image))));
+                    plus(Image.of(Resource.of(new File(image))));
             myProduce.setSendPicPath(name, image);
             sb = new StringBuilder();
 
@@ -348,7 +348,7 @@ public class MyGroupListen {
     public void tietie(GroupMessageEvent groupMessageEvent) {
         Messages res = Messages.emptyMessages();
         if (groupMessageEvent.getMessageContent().getMessages().get(At.Key).toString().contains("3425460643")) {
-            res = res.plus(groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File(picDao.getPathsByKind(1,"贴贴").get(0).getPath()))));
+            res = res.plus(Image.of(Resource.of(new File(picDao.getPathsByKind(1,"贴贴").get(0).getPath()))));
             if (new Random().nextInt(30) ==1) {
                 res = Messages.toMessages(Text.of(
                                 "    　      ∧,,　\n" +
@@ -464,7 +464,7 @@ public class MyGroupListen {
         for (Image image : images) {
             ArrayList<Messages> res= null;
             try {
-                res = picSources.getPicSource(image,groupMessageEvent.getBot());
+                res = picSources.getPicSource(image);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -532,7 +532,7 @@ public class MyGroupListen {
     public void news(GroupMessageEvent groupMessageEvent) {
         Message.Element<?> element = null;
         try {
-            element = groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new URL("https://api.vvhan.com/api/60s")));
+            element = Image.of(Resource.of(new URL("https://api.vvhan.com/api/60s")));
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -548,7 +548,7 @@ public class MyGroupListen {
         txt = txt.substring(txt.indexOf(' ')).trim();
         Message.Element<?> element = null;
         try {
-            element = groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new URL("https://api.vvhan.com/api/qr?text=" + txt)));
+            element = Image.of(Resource.of(new URL("https://api.vvhan.com/api/qr?text=" + txt)));
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -632,7 +632,6 @@ public class MyGroupListen {
         String txt = groupMessageEvent.getMessageContent().getPlainText().toLowerCase(), groupCode = groupMessageEvent.getGroup().getId().toString(), userCode = groupMessageEvent.getAuthor().getId().toString();
         String res = "";
         Messages messages = Messages.emptyMessages();
-        Bot bot=groupMessageEvent.getBot();
         if ("475954521".equals(groupCode)) {
             if (txt.equals("bupt")) {
                 if (BUPTHELP == null) {
@@ -640,7 +639,7 @@ public class MyGroupListen {
                             "看群公告群文件群相册群精华消息\n\n"
                                     + "学校官网(需有学号后使用)： webvpn.bupt.edu.cn  常用信息门户、本科教务管理系统\n"
                                     + "进群记得修改群名片 例如【20-河南-计算机-汪哈羊】"));
-                    messages = messages.plus(groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\tips.jpg"))));
+                    messages = messages.plus(Image.of(Resource.of(new File("D:\\botPic\\bupt\\tips.jpg"))));
                     messages = messages.plus(Text.of(
                             "功能：”学校地图“，”学校网址“，”宿舍规格“,”本部地图“，”快递地址“\n"
                                     + "“/put [名称] [群号]”放入群号，”北邮xx群“查询群号，“@我”@你自己"));
@@ -649,13 +648,13 @@ public class MyGroupListen {
                     messages = BUPTHELP;
                 }
             } else if (txt.contains("宿舍规格")) {
-                messages=messages.plus(bot.uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\宿舍.jpg"))));
+                messages=messages.plus(Image.of(Resource.of(new File("D:\\botPic\\bupt\\宿舍.jpg"))));
             } else if (txt.equals("学校地图")) {
-                messages=messages.plus(bot.uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\校园地形.jpg"))));
+                messages=messages.plus(Image.of(Resource.of(new File("D:\\botPic\\bupt\\校园地形.jpg"))));
             } else if (txt.equals("本部地图")) {
-                messages=messages.plus(bot.uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\本部地图.jpg"))));
+                messages=messages.plus(Image.of(Resource.of(new File("D:\\botPic\\bupt\\本部地图.jpg"))));
             } else if (txt.contains("wifi") && txt.contains("怎么")) {
-                messages=messages.plus(bot.uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\wifi.jpg"))));
+                messages=messages.plus(Image.of(Resource.of(new File("D:\\botPic\\bupt\\wifi.jpg"))));
             } else if (txt.equals("学校网址")) {
                 res = "选课使用教务系统，如果无法直接打开可以通过VPN登陆。\n" +
                         "WebVpn系统（在校外访问内?必备）： https://webvpn.bupt.edu.cn/login以及https://libcon.bupt.edu.cn/  \n" +
@@ -731,7 +730,7 @@ public class MyGroupListen {
     @Filter(value = "海南学院", matchType = MatchType.TEXT_EQUALS)
     public void hainan(GroupMessageEvent groupMessageEvent) {
         Message.Element<?> element =
-                groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File("D:\\botPic\\bupt\\海南学院.jpg")));
+                Image.of(Resource.of(new File("D:\\botPic\\bupt\\海南学院.jpg")));
         myProduce.sendMsg(groupMessageEvent, element, true);
     }
 
@@ -918,7 +917,7 @@ public class MyGroupListen {
         //System.out.println("groupMessageEvent.getKey(QuoteReply.Key).getParents() = " + groupMessageEvent.getKey().getParents());
     }
 
-    @javax.annotation.Resource
+    @Autowired
     MyWordCloud myWordCloud;
 
     @Listener
@@ -931,7 +930,7 @@ public class MyGroupListen {
         }else if(code.equals("475954521")) return;
         String path=myWordCloud.createWordCountPic(code);
 
-        Message.Element<?> element = groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File(path)));
+        Message.Element<?> element = Image.of(Resource.of(new File(path)));
         myProduce.sendMsg(groupMessageEvent, element, true);
     }
     @Listener
@@ -947,7 +946,7 @@ public class MyGroupListen {
         String path=myWordCloud.createWordCountPic(code);
 
 
-        Message.Element<?> element = groupMessageEvent.getBot().uploadImageBlocking(Resource.of(new File(path)));
+        Message.Element<?> element = Image.of(Resource.of(new File(path)));
         myProduce.sendMsg(groupMessageEvent, element, auth);
     }
 

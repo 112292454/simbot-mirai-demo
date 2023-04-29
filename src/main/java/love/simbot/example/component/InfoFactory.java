@@ -1,12 +1,12 @@
 package love.simbot.example.component;
 
-import love.simbot.example.batch.BatchController;
-import org.springframework.beans.factory.annotation.Autowired;
+//import love.simbot.example.batch.BatchController;
+
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class InfoFactory {
-	@Autowired
+/*	@Autowired
 	BatchController controller;
 
 	public InfoFactory(BatchController batchController){}
@@ -18,5 +18,5 @@ public class InfoFactory {
 			e.printStackTrace();
 		}
 		return new picFolderInfo(kind,path);
-	}
+	}*/
 }

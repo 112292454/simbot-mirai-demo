@@ -1,4 +1,4 @@
-package love.simbot.example.group.dao;
+package love.simbot.example;
 
 import love.simbot.example.group.component.GroupCode;
 import org.apache.ibatis.annotations.*;
@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Mapper
+@Repository
 public interface GroupDao {
 	@Select("select * from groupcode where id=#{id}")
 	GroupCode getGroupCodeById(Integer id);
